@@ -426,27 +426,31 @@ jobSchema.index(
  */
 jobSchema.index({ createdAt: 1 });
 
-jobSchema.index(
-  {
-    subscriberId: 1,
-    _environmentId: 1,
-    'digest.digestValue': 1,
-    'digest.digestKey': 1,
-    _templateId: 1,
-    status: 1,
-    type: 1,
+export const DIGEST_MASTER_GUARD_INDEX_NAME =
+  'Guard from having two master jobs for same digest key, digest value, workflow and subscriber';
+
+export const DIGEST_MASTER_GUARD_INDEX_KEY = {
+  _subscriberId: 1,
+  _environmentId: 1,
+  'digest.digestValue': 1,
+  'digest.digestKey': 1,
+  _templateId: 1,
+  status: 1,
+  type: 1,
+} as const;
+
+export const DIGEST_MASTER_GUARD_INDEX_OPTIONS = {
+  name: DIGEST_MASTER_GUARD_INDEX_NAME,
+  unique: true,
+  partialFilterExpression: {
+    status: 'delayed',
+    type: 'digest',
+    createdAt: { $gte: new Date('2025-03-05T00:00:01.505+00:00') },
+    'digest.digestValue': { $exists: true },
+    'digest.digestKey': { $exists: true },
   },
-  {
-    name: 'Guard from having two master jobs for same digest key, digest value, workflow and subscriber',
-    unique: true,
-    partialFilterExpression: {
-      status: 'delayed',
-      type: 'digest',
-      createdAt: { $gte: new Date('2025-03-05T00:00:01.505+00:00') },
-      'digest.digestValue': { $exists: true },
-      'digest.digestKey': { $exists: true },
-    },
-  }
-);
+} as const;
+
+jobSchema.index(DIGEST_MASTER_GUARD_INDEX_KEY, DIGEST_MASTER_GUARD_INDEX_OPTIONS);
 
 export const Job = (mongoose.models.Job as mongoose.Model<JobDBModel>) || mongoose.model<JobDBModel>('Job', jobSchema);
